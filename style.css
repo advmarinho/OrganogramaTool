@@ -1,0 +1,137 @@
+/* Estrutura geral e estilo base */
+body {
+    font-family: Arial, sans-serif;
+    color: #333;
+    background-color: #f9f9f9;
+    margin: 0;
+    padding: 0;
+}
+
+#organogram-container {
+    width: 80%;
+    margin: auto;
+    padding-top: 20px;
+}
+
+.directorate {
+    margin-bottom: 20px;
+    color: white !important; /* Força a cor branca no nome do diretor */
+    font-size: 1.1em;
+    font-weight: bold;
+    background-color: white; /* Fundo com a cor primária escura */
+    padding: 10px;
+    border-radius: 8px;
+}
+
+
+.manager {
+    font-weight: bold;
+    cursor: pointer;
+    margin-bottom: 5px;
+    color: #007889; /* Cor principal */
+}
+
+/* Estilo de nó e caixa de cada pessoa */
+.node {
+    background-color: #007889; /* Cor principal do HAOC */
+    color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.employee {
+    background-color: #f0f8ff;
+    color: #333;
+    border-radius: 8px;
+    padding: 8px;
+    margin-bottom: 6px;
+}
+
+/* Subordinados */
+.subordinates-container {
+    margin-left: 20px;
+    border-left: 2px solid #00a39e; /* Verde institucional */
+    padding-left: 10px;
+    background-color: #e6f4f1; /* Fundo claro para separar os subordinados */
+    transition: all 0.3s ease;
+}
+
+/* Botão de expansão */
+.toggle-btn {
+    font-size: 12px;
+    padding: 2px 8px;
+    cursor: pointer;
+    background-color: #003B4E; /* Cor primária escura */
+    color: white;
+    border-radius: 4px;
+    border: none;
+    margin-left: 10px;
+    transition: all 0.3s ease;
+}
+
+/* Estilos de contagem e destaques */
+.counter {
+    background-color: #f0f0f0;
+    color: #333;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    display: inline-block;
+    margin-left: 8px;
+}
+
+.highlight {
+    background-color: #33cccc;
+    font-weight: bold;
+    border-radius: 4px;
+    padding: 2px;
+}
+
+/* Estilo das seções de diretoria */
+.directorate-section {
+    margin-top: 20px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+/* Ajustes de pesquisa */
+#searchInput {
+    padding: 8px;
+    width: 80%;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-right: 5px;
+}
+
+button {
+    padding: 8px 12px;
+    background-color: #007889;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #005f6b;
+}
+
+/* Header e caixas de separação */
+.employee-name {
+    font-weight: bold;
+    color: black /* Força a cor branca no nome da pessoa */1;
+    font-size: 1em;
+}
+
+/* Ajuste para dispositivos móveis */
+@media (max-width: 768px) {
+    #organogram-container {
+        width: 100%;
+        padding: 10px;
+    }
+}   

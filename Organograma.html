@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Organograma Dinâmico</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+</head>
+<body>
+    <input type="file" id="fileUpload" />
+    <button id="loadExcel">Carregar Organograma</button>
+
+    <!-- Novos elementos para pesquisa e controle de exibição -->
+    <div>
+        <input type="text" id="searchInput" placeholder="Pesquisar no organograma" />
+        <button onclick="searchOrganogram()">Pesquisar</button>
+        <button onclick="expandAll()">Abrir Todos</button>
+        <button onclick="collapseAll()">Fechar Todos</button>
+    </div>
+
+    <div id="organogram-container"></div>
+    <script src="script.js"></script>
+</body>
+</html>
