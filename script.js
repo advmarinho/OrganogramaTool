@@ -1,11 +1,11 @@
 // Flag para controle de visibilidade da seção principal "HAOC"
-let showHAOCSection = false; // Define se a seção "HAOC" será exibida por padrão
+let showHAOCSection = true;
 
 // Função para alternar visibilidade da seção "HAOC"
 function toggleHAOCSection() {
-    showHAOCSection = !showHAOCSection; // Inverte o valor da flag
-    const haocContainer = document.getElementById('haoc-container');
-    haocContainer.style.display = showHAOCSection ? 'block' : 'none'; // Mostra ou oculta com base na flag
+    showHAOCSection = !showHAOCSection;
+    const haocContainer = document.getElementById('organogram-container');
+    haocContainer.style.display = showHAOCSection ? 'block' : 'none';
     document.getElementById('toggleHAOCButton').textContent = showHAOCSection ? 'Ocultar HAOC' : 'Mostrar HAOC';
 }
 
@@ -14,8 +14,9 @@ const toggleButton = document.createElement('button');
 toggleButton.id = 'toggleHAOCButton';
 toggleButton.textContent = 'Ocultar HAOC';
 toggleButton.onclick = toggleHAOCSection;
-document.body.appendChild(toggleButton);
+document.body.insertBefore(toggleButton, document.body.firstChild);
 
+// Função para carregar o Excel e gerar o organograma
 document.getElementById('loadExcel').addEventListener('click', function () {
     var input = document.getElementById('fileUpload');
     var reader = new FileReader();
@@ -27,9 +28,24 @@ document.getElementById('loadExcel').addEventListener('click', function () {
         var sheet = workbook.Sheets[sheetName];
         var jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
+        // Verificar e ajustar a estrutura do Excel para garantir compatibilidade
+        const headers = jsonData[0].map(h => h.trim().toLowerCase());
+        
+        // Mapeia os índices de cada coluna necessária
+        const nameIndex = headers.indexOf("nome do funcionário");
+        const managerIndex = headers.indexOf("chefe imediato");
+        const roleIndex = headers.indexOf("função");
+        const departmentIndex = headers.indexOf("setor");
+        const directorateIndex = headers.indexOf("diretoria");
+        const matriculaIndex = headers.indexOf("matrícula");
+
+        if (nameIndex === -1 || managerIndex === -1 || roleIndex === -1 || directorateIndex === -1 || matriculaIndex === -1) {
+            alert("O arquivo não está no formato correto. Certifique-se de que o cabeçalho contém as colunas 'Nome do Funcionário', 'Chefe Imediato', 'Função', 'Setor', 'Diretoria', e 'Matrícula'.");
+            return;
+        }
+
         // Processar o jsonData para gerar o organograma
-        generateOrganogram(jsonData);
-        displayDirectorates(jsonData); // Adiciona a exibição das diretorias separadas
+        generateOrganogram(jsonData, { nameIndex, managerIndex, roleIndex, departmentIndex, directorateIndex, matriculaIndex });
     };
 
     if (input.files.length) {
@@ -44,251 +60,191 @@ function removeAccents(str) {
     return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
-// Função para capitalizar a primeira letra de cada palavra,
-// mantendo números romanos e preposições inalterados
+// Função para capitalizar a primeira letra de cada palavra, evitando números romanos de I a V
 function capitalizeWords(str) {
-    const romanNumerals = ["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"];
-    return str.toLowerCase().replace(/\b([a-zçáéíóú]+|[ivx]+)\b/g, (word) => {
-        if (romanNumerals.includes(word)) {
-            return word.toUpperCase();
-        }
-        if (["de", "do", "da", "e"].includes(word)) {
-            return word;
-        }
-        return word.charAt(0).toUpperCase() + word.slice(1);
-    });
+    const romanNumerals = ['I', 'II', 'III', 'IV', 'V'];
+    return str
+        .toLowerCase()
+        .split(' ')
+        .map(word => romanNumerals.includes(word.toUpperCase()) ? word.toUpperCase() : word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
 }
 
-function generateOrganogram(data) {
-    let container = document.createElement('div');
-    container.id = 'haoc-container'; // Contêiner para a seção "HAOC"
-    container.style.display = showHAOCSection ? 'block' : 'none'; // Aplica a visibilidade com base na flag
-    document.body.appendChild(container);
+// Função para abreviar o nome da diretoria
+function abbreviateDirectorate(name) {
+    return name.split(' ').map(word => word.charAt(0)).join('').toUpperCase();
+}
+
+// Variáveis globais para organizar dados de hierarquia
+let hierarchy = {};
+let roles = {};
+let directorates = {};
+let matriculas = {}; // Novo objeto para armazenar matrículas
+
+// Função para contar subordinados de um gerente
+function countSubordinates(manager) {
+    if (!hierarchy[manager]) return 0;
+    return hierarchy[manager].reduce((count, subordinate) => {
+        return count + 1 + countSubordinates(subordinate.name);
+    }, 0);
+}
+
+// Função principal para gerar o organograma com classificação alfabética
+function generateOrganogram(data, indices) {
+    let container = document.getElementById('organogram-container');
     container.innerHTML = ''; // Limpa o container
 
-    let hierarchy = {};
-    let totalCount = 0; // Contador geral de todos os funcionários e chefias
+    hierarchy = {};
+    roles = {};
+    directorates = {};
+    matriculas = {}; // Limpar a lista de matrículas
 
     // Organizar os dados por chefe e consolidar subordinados
     data.slice(1).forEach(row => {
-        let employee = removeAccents(row[0]);
-        let manager = removeAccents(row[1]);
-        let role = removeAccents(row[2]);
-        let department = removeAccents(row[3]);
-        let directorate = removeAccents(row[4]);
+        let employee = removeAccents(row[indices.nameIndex]);
+        let manager = removeAccents(row[indices.managerIndex]);
+        let role = removeAccents(row[indices.roleIndex]);
+        let directorate = row[indices.directorateIndex];
+        let matricula = row[indices.matriculaIndex];
+
+        if (!roles[employee]) roles[employee] = role;
+        if (!directorates[employee]) directorates[employee] = directorate;
+        if (!matriculas[employee]) matriculas[employee] = matricula;
 
         if (!hierarchy[manager]) {
             hierarchy[manager] = [];
         }
-
         hierarchy[manager].push({
             name: employee,
             role: role,
-            department: department,
-            directorate: directorate
+            directorate: directorate,
+            matricula: matricula
         });
-        totalCount++; // Incrementa o contador geral
     });
 
-    // Função recursiva para criar a hierarquia de cada chefe, com contagem de subordinados
-    function createHierarchy(manager, employees) {
-        employees.sort((a, b) => a.name.localeCompare(b.name)); // Ordena chefias subordinadas
+    // Classifica os gestores de nível superior (sem gerentes acima)
+    let topLevelManagers = Object.keys(hierarchy).filter(manager => !data.slice(1).some(row => removeAccents(row[indices.nameIndex]) === manager));
+    topLevelManagers.sort((a, b) => a.localeCompare(b));
 
-        let managerDiv = document.createElement('div');
-        let managerCount = manager === 'HAOC' ? totalCount : employees.length;
+    // Criar a linha inicial com todos os gestores de nível superior
+    let topLevelContainer = document.createElement('div');
+    topLevelContainer.classList.add('top-level-container');
 
-        managerDiv.classList.add('node', 'manager');
-        managerDiv.innerHTML = `
-            <strong class="employee-name">${capitalizeWords(manager)}</strong>
-            <span class="counter">${managerCount > 0 ? managerCount : '-'}</span>
-            <button class="toggle-btn">+</button>
-        `;
+    topLevelManagers.forEach(manager => {
+        let subordinatesCount = countSubordinates(manager); // Calcula o número de subordinados
+        let managerDiv = createManagerNode(manager, roles[manager], directorates[manager], subordinatesCount, matriculas[manager]);
+        topLevelContainer.appendChild(managerDiv);
 
+        // Adicionar container para subordinados (inicialmente fechado)
         let subordinatesContainer = document.createElement('div');
         subordinatesContainer.classList.add('subordinates-container');
         subordinatesContainer.style.display = 'none';
 
-        employees.forEach(subordinate => {
-            let subordinateDiv = document.createElement('div');
-            subordinateDiv.classList.add('node', 'employee');
-
-            if (hierarchy[subordinate.name]) {
-                subordinateDiv.appendChild(createHierarchy(subordinate.name, hierarchy[subordinate.name]));
-            } else {
-                let displayName = capitalizeWords(subordinate.name);
-                if (displayName.includes("Oswaldo Cruz")) {
-                    displayName = displayName.replace("Oswaldo Cruz", "<span style='color: green; font-weight: bold;'>Oswaldo Cruz</span>");
-                }
-                
-                subordinateDiv.innerHTML = `
-                    <p class="employee-name"><strong>Nome:</strong> ${displayName} <br>
-                    <strong>Função:</strong> ${capitalizeWords(subordinate.role)} <br>
-                    <strong>Setor:</strong> ${capitalizeWords(subordinate.department)} <br>
-                    <strong>Diretoria:</strong> ${capitalizeWords(subordinate.directorate)}</p>
-                `;
-            }
-
-            subordinatesContainer.appendChild(subordinateDiv);
-        });
-
-        managerDiv.appendChild(subordinatesContainer);
-
-        managerDiv.querySelector('.toggle-btn').addEventListener('click', function () {
-            const isVisible = subordinatesContainer.style.display === 'block';
-            subordinatesContainer.style.display = isVisible ? 'none' : 'block';
-            this.textContent = isVisible ? '+' : '-';
-        });
-
-        return managerDiv;
-    }
-
-    let sortedManagers = Object.keys(hierarchy).sort((a, b) => {
-        if (a === "HAOC") return -1;
-        if (b === "HAOC") return 1;
-        return a.localeCompare(b); // Ordena alfabeticamente os gestores
-    });
-
-    sortedManagers.forEach(manager => {
-        let hierarchyTree = createHierarchy(manager, hierarchy[manager]);
-        container.appendChild(hierarchyTree);
-    });
-}
-
-// Função para exibir as diretorias separadas, com "Jose Marcelo Amatuzzi de Oliveira" no topo e até três níveis de subordinados
-function displayDirectorates(data) {
-    let directorateContainer = document.createElement('div');
-    directorateContainer.id = 'directorate-container';
-    document.body.appendChild(directorateContainer);
-
-    let directorates = {};
-
-    // Organizar dados por diretoria
-    data.slice(1).forEach(row => {
-        let directorate = capitalizeWords(removeAccents(row[4])); // Diretoria na coluna 4
-        let employee = capitalizeWords(removeAccents(row[0]));
-        let manager = capitalizeWords(removeAccents(row[1]));
-        let role = capitalizeWords(removeAccents(row[2]));
-        let department = capitalizeWords(removeAccents(row[3]));
-
-        // Inicializar diretoria se não existir
-        if (!directorates[directorate]) {
-            directorates[directorate] = [];
+        if (hierarchy[manager]) {
+            hierarchy[manager].sort((a, b) => a.name.localeCompare(b.name));
+            hierarchy[manager].forEach(subordinate => {
+                let subordinateTree = createSubordinateTree(subordinate.name, hierarchy, roles, directorates, matriculas);
+                subordinatesContainer.appendChild(subordinateTree);
+            });
         }
 
-        directorates[directorate].push({
-            name: employee,
-            manager: manager,
-            role: role,
-            department: department,
-            directorate: directorate
-        });
+        managerDiv.appendChild(subordinatesContainer);
     });
 
-    // Exibir cada diretoria e seus funcionários, com "Jose Marcelo Amatuzzi de Oliveira" no topo
-    Object.keys(directorates).sort().forEach(directorate => {
-        let directorateDiv = document.createElement('div');
-        directorateDiv.classList.add('directorate-section');
-        directorateDiv.innerHTML = `<h2>${directorate}</h2>`;
-
-        // Primeiro, exibe os diretores que reportam a "Jose Marcelo Amatuzzi de Oliveira"
-        let directReports = directorates[directorate].filter(person => person.manager === "Jose Marcelo Amatuzzi de Oliveira");
-        directReports.sort((a, b) => a.name.localeCompare(b.name)); // Ordena os diretores
-        directReports.forEach(director => {
-            let directorDiv = createHierarchySection(director, directorates[directorate]);
-            directorateDiv.appendChild(directorDiv);
-        });
-
-        directorateContainer.appendChild(directorateDiv);
-    });
+    container.appendChild(topLevelContainer);
 }
 
-// Função para criar uma seção de hierarquia recursiva com até três níveis de subordinados
-function createHierarchySection(person, directorateData) {
-    let personDiv = document.createElement('div');
-    personDiv.classList.add('node', 'manager');
-    personDiv.innerHTML = `
-        <strong class="employee-name">Nome: ${person.name}</strong><br>
-        <strong>Função:</strong> ${person.role} <br>
-        <strong>Setor:</strong> ${person.department} <br>
-        <strong>Diretoria:</strong> ${person.directorate} <br>
-        <span class="counter">${countSubordinates(person.name, directorateData) > 0 ? countSubordinates(person.name, directorateData) : '-'}</span>
+// Função para criar o nó de um gestor com a contagem de subordinados e a matrícula
+function createManagerNode(manager, role, directorate, subordinatesCount, matricula) {
+    let managerDiv = document.createElement('div');
+    managerDiv.classList.add('node', 'manager');
+
+    let directorateAbbr = abbreviateDirectorate(capitalizeWords(directorate || ''));
+
+    managerDiv.innerHTML = `
+        <div class="employee-name">
+            <strong>${capitalizeWords(manager)}</strong><br>
+            <span class="role">${capitalizeWords(role || '')}</span><br>
+            <span class="directorate" title="${directorate}">${directorateAbbr}</span><br>
+            <span class="matricula"><strong>Matrícula: ${matricula || '-'}</strong></span><br>
+            <span class="headcount-square">${subordinatesCount === 0 ? '-' : subordinatesCount}</span>
+        </div>
         <button class="toggle-btn">+</button>
     `;
 
-    let subordinatesContainer = document.createElement('div');
-    subordinatesContainer.classList.add('subordinates-container');
-    subordinatesContainer.style.display = 'none';
-
-    // Adiciona subordinados do primeiro nível
-    let firstLevelSubordinates = directorateData.filter(sub => sub.manager === person.name);
-    firstLevelSubordinates.sort((a, b) => a.name.localeCompare(b.name)); // Ordena os subordinados
-    firstLevelSubordinates.forEach(firstSub => {
-        let firstSubDiv = createSubordinateSection(firstSub, directorateData, 2); // Passa para o segundo nível
-        subordinatesContainer.appendChild(firstSubDiv);
-    });
-
-    personDiv.appendChild(subordinatesContainer);
-
-    personDiv.querySelector('.toggle-btn').addEventListener('click', function () {
-        const isVisible = subordinatesContainer.style.display === 'block';
-        subordinatesContainer.style.display = isVisible ? 'none' : 'block';
+    managerDiv.querySelector('.toggle-btn').addEventListener('click', function () {
+        const subordinatesContainer = managerDiv.querySelector('.subordinates-container');
+        const isVisible = subordinatesContainer.style.display === 'flex';
+        subordinatesContainer.style.display = isVisible ? 'none' : 'flex';
         this.textContent = isVisible ? '+' : '-';
+
+        if (!isVisible) {
+            managerDiv.classList.add('highlight');
+        } else {
+            managerDiv.classList.remove('highlight');
+        }
     });
 
-    return personDiv;
+    return managerDiv;
 }
 
-// Função para criar uma seção para subordinados recursivamente até três níveis
-function createSubordinateSection(person, directorateData, level) {
-    let personDiv = document.createElement('div');
-    personDiv.classList.add('node', 'employee');
-    personDiv.innerHTML = `
-        <p class="employee-name"><strong>Nome:</strong> ${person.name} <br>
-        <strong>Função:</strong> ${person.role} <br>
-        <strong>Setor:</strong> ${person.department} <br>
-        <strong>Diretoria:</strong> ${person.directorate} <br>
-        <span class="counter">${countSubordinates(person.name, directorateData) > 0 ? countSubordinates(person.name, directorateData) : '-'}</span></p>
+// Função para criar a árvore de subordinados com classificação e matrícula
+function createSubordinateTree(name, hierarchy, roles, directorates, matriculas) {
+    let subordinateDiv = document.createElement('div');
+    subordinateDiv.classList.add('node', 'employee');
+
+    let subordinatesCount = countSubordinates(name); // Contagem de subordinados
+    let directorateAbbr = abbreviateDirectorate(capitalizeWords(directorates[name] || ''));
+
+    subordinateDiv.innerHTML = `
+        <div class="employee-name">
+            <strong>${capitalizeWords(name)}</strong><br>
+            <span class="role">${capitalizeWords(roles[name] || '')}</span><br>
+            <span class="directorate" title="${directorates[name] || ''}">${directorateAbbr}</span><br>
+            <span class="matricula"><strong>Matrícula: ${matriculas[name] || '-'}</strong></span><br>
+            <span class="headcount-square">${subordinatesCount === 0 ? '-' : subordinatesCount}</span>
+        </div>
     `;
 
-    // Adiciona subordinados do próximo nível, se houver
-    if (level < 4) { // Limita ao terceiro nível
+    if (hierarchy[name]) {
         let subordinatesContainer = document.createElement('div');
         subordinatesContainer.classList.add('subordinates-container');
         subordinatesContainer.style.display = 'none';
 
-        let nextLevelSubordinates = directorateData.filter(sub => sub.manager === person.name);
-        nextLevelSubordinates.sort((a, b) => a.name.localeCompare(b.name)); // Ordena os subordinados
-        nextLevelSubordinates.forEach(nextSub => {
-            let nextSubDiv = createSubordinateSection(nextSub, directorateData, level + 1);
-            subordinatesContainer.appendChild(nextSubDiv);
+        // Classifica os subordinados em ordem alfabética
+        hierarchy[name].sort((a, b) => a.name.localeCompare(b.name));
+        hierarchy[name].forEach(subordinate => {
+            let childSubordinate = createSubordinateTree(subordinate.name, hierarchy, roles, directorates, matriculas);
+            subordinatesContainer.appendChild(childSubordinate);
         });
 
-        if (nextLevelSubordinates.length > 0) {
-            let toggleBtn = document.createElement('button');
-            toggleBtn.classList.add('toggle-btn');
-            toggleBtn.textContent = '+';
-            toggleBtn.addEventListener('click', function () {
-                const isVisible = subordinatesContainer.style.display === 'block';
-                subordinatesContainer.style.display = isVisible ? 'none' : 'block';
-                this.textContent = isVisible ? '+' : '-';
-            });
-            personDiv.appendChild(toggleBtn);
-            personDiv.appendChild(subordinatesContainer);
-        }
+        subordinateDiv.appendChild(subordinatesContainer);
+
+        let toggleButton = document.createElement('button');
+        toggleButton.classList.add('toggle-btn');
+        toggleButton.textContent = '+';
+        toggleButton.addEventListener('click', function () {
+            const isVisible = subordinatesContainer.style.display === 'flex';
+            subordinatesContainer.style.display = isVisible ? 'none' : 'flex';
+            this.textContent = isVisible ? '+' : '-';
+
+            if (!isVisible) {
+                subordinateDiv.classList.add('highlight');
+            } else {
+                subordinateDiv.classList.remove('highlight');
+            }
+        });
+
+        subordinateDiv.appendChild(toggleButton);
     }
 
-    return personDiv;
+    return subordinateDiv;
 }
 
-// Função para contar subordinados de um determinado gerente
-function countSubordinates(managerName, directorateData) {
-    return directorateData.filter(sub => sub.manager === managerName).length;
-}
-
-// Funções para abrir e fechar todos os nós
+// Funções para expandir e colapsar todos os nós
 function expandAll() {
     document.querySelectorAll('.subordinates-container').forEach(container => {
-        container.style.display = 'block';
+        container.style.display = 'flex';
     });
     document.querySelectorAll('.toggle-btn').forEach(button => {
         button.textContent = '-';
@@ -304,13 +260,33 @@ function collapseAll() {
     });
 }
 
+// Função para exportar o organograma para PDF
+function exportToPDF() {
+    const element = document.getElementById('organogram-container');
+    const options = {
+        margin:       0.5,
+        filename:     'organogram.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+    };
+    html2pdf().set(options).from(element).save();
+}
+
+// Adicionar botão para exportação para PDF
+const exportButton = document.createElement('button');
+exportButton.id = 'exportToPDFButton';
+exportButton.textContent = 'Exportar para PDF';
+exportButton.onclick = exportToPDF;
+document.body.insertBefore(exportButton, document.body.firstChild);
+
 // Função de pesquisa para localizar um funcionário ou chefe
 function searchOrganogram() {
     let query = removeAccents(document.getElementById('searchInput').value.trim().toLowerCase());
     let found = false;
 
-    document.querySelectorAll('.highlight').forEach(node => {
-        node.classList.remove('highlight');
+    document.querySelectorAll('.highlight-search').forEach(node => {
+        node.classList.remove('highlight-search');
     });
 
     document.querySelectorAll('.employee-name').forEach(node => {
@@ -318,7 +294,7 @@ function searchOrganogram() {
         if (name.includes(query)) {
             expandToNode(node);
             node.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            node.classList.add('highlight');
+            node.classList.add('highlight-search');
             found = true;
         }
     });
@@ -328,6 +304,7 @@ function searchOrganogram() {
     }
 }
 
+// Função auxiliar para expandir até o nó encontrado
 function expandToNode(node) {
     let parent = node.closest('.subordinates-container');
     while (parent) {
@@ -338,38 +315,38 @@ function expandToNode(node) {
     }
 }
 
-document.getElementById('searchInput').addEventListener('keydown', function(event) {
+
+// Função para gerar e baixar o template de Excel
+function downloadTemplate() {
+    // Dados do template com nomes genéricos
+    const templateData = [
+        ["Nome do Funcionário", "Chefe Imediato", "Função", "Setor", "Diretoria", "Matrícula"],
+        ["Funcionário A", "Funcionário B", "Analista", "Setor X", "Diretoria Y", "10001"],
+        ["Funcionário B", "", "Gerente", "Setor X", "Diretoria Y", "10002"],
+        ["Funcionário C", "Funcionário B", "Assistente", "Setor Z", "Diretoria Y", "10003"]
+        ["..."],
+        ["Instrução: Certifique-se de que o nome do 'Chefe Imediato' seja exatamente igual ao 'Nome do Funcionário' que ocupa essa posição. Qualquer diferença, mesmo de espaços ou letras maiúsculas/minúsculas, pode causar problemas na hierarquia."],
+        
+    ];
+
+    // Criação do workbook e da planilha
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(templateData);
+
+    // Adiciona a planilha ao workbook
+    XLSX.utils.book_append_sheet(wb, ws, "Template Organograma");
+
+    // Gera o arquivo para download
+    XLSX.writeFile(wb, "Template_Organograma.xlsx");
+}
+
+// Adiciona o evento de clique para download do template
+document.getElementById('downloadTemplate').addEventListener('click', downloadTemplate);
+
+
+// Evento de busca ao pressionar "Enter"
+document.getElementById('searchInput').addEventListener('keydown', function (event) {
     if (event.key === 'Enter') {
         searchOrganogram();
     }
 });
-
-const style = document.createElement('style');
-style.innerHTML = `
-    .counter {
-        background-color: #f0f0f0;
-        color: #333;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-weight: bold;
-        display: inline-block;
-        margin-left: 8px;
-    }
-    .highlight {
-        background-color: #33cccc;
-        font-weight: bold;
-        border-radius: 4px;
-        padding: 2px;
-    }
-    .directorate-section {
-        margin-top: 20px;
-        padding: 10px;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        background-color: #f9f9f9;
-    }
-    .employee-entry {
-        margin-bottom: 10px;
-    }
-`;
-document.head.appendChild(style);

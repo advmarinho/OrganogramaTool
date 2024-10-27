@@ -3,24 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
     <title>Organograma Dinâmico</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Biblioteca XLSX para leitura de arquivos Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
-    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <!-- Biblioteca jsPDF para exportação em PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Biblioteca html2canvas para renderizar o HTML em canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
 </head>
 <body>
-    <input type="file" id="fileUpload" />
-    <button id="loadExcel">Carregar Organograma</button>
+    <div class="container">
+        <!-- Descrição para impressão -->
+        <header>
+            <h1>Organograma Dinâmico</h1>
+            <p>Este organograma dinâmico permite carregar, visualizar e pesquisar a estrutura hierárquica da organização com base em dados de um arquivo Excel. Utilize os controles abaixo para carregar, pesquisar e expandir ou reduzir os níveis hierárquicos conforme necessário.</p>
+            <p>Para exportar o organograma para PDF, use o botão "Exportar para PDF ou Ctrl+P".</p>
+        </header>
 
-    <!-- Novos elementos para pesquisa e controle de exibição -->
-    <div>
-        <input type="text" id="searchInput" placeholder="Pesquisar no organograma" />
-        <button onclick="searchOrganogram()">Pesquisar</button>
-        <button onclick="expandAll()">Abrir Todos</button>
-        <button onclick="collapseAll()">Fechar Todos</button>
+        <div class="controls">
+            <input type="file" id="fileUpload" class="file-input" />
+            <button id="loadExcel" class="btn-primary">Carregar Organograma</button>
+            <input type="text" id="searchInput" class="search-input" placeholder="Pesquisar no organograma" />
+            <button onclick="searchOrganogram()" class="btn-secondary">Pesquisar</button>
+            <button onclick="expandAll()" class="btn-primary">Abrir Todos</button>
+            <button onclick="collapseAll()" class="btn-secondary">Fechar Todos</button>
+            <!-- <button id="exportToPDFButton" class="btn-primary">Exportar para PDF</button> -->
+            <button id="downloadTemplate" class="btn-primary">Baixar Template exemplo</button>
+
+        </div>
+
+        <div id="organogram-container"></div>
     </div>
-
-    <div id="organogram-container"></div>
     <script src="script.js"></script>
+
+    <footer>
+        <p>&copy; 2024 Anderson Marinho. Todos os direitos reservados.</p>
+    </footer>
+
 </body>
 </html>

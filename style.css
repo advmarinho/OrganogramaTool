@@ -1,137 +1,146 @@
-/* Estrutura geral e estilo base */
+/* Estilos gerais */
 body {
     font-family: Arial, sans-serif;
     color: #333;
     background-color: #f9f9f9;
     margin: 0;
     padding: 0;
+    font-size: 14px; /* Tamanho da fonte geral reduzido */
 }
 
-#organogram-container {
-    width: 80%;
-    margin: auto;
-    padding-top: 20px;
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 30px auto;
+    padding: 15px;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+    background-color: #ffffff;
+    border-radius: 6px;
 }
 
-.directorate {
-    margin-bottom: 20px;
-    color: white !important; /* Força a cor branca no nome do diretor */
-    font-size: 1.1em;
-    font-weight: bold;
-    background-color: white; /* Fundo com a cor primária escura */
-    padding: 10px;
-    border-radius: 8px;
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 15px;
 }
 
-
-.manager {
-    font-weight: bold;
-    cursor: pointer;
-    margin-bottom: 5px;
-    color: #007889; /* Cor principal */
-}
-
-/* Estilo de nó e caixa de cada pessoa */
-.node {
-    background-color: #007889; /* Cor principal do HAOC */
-    color: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    padding: 10px;
-    margin-bottom: 10px;
-}
-
-.employee {
-    background-color: #f0f8ff;
-    color: #333;
-    border-radius: 8px;
-    padding: 8px;
-    margin-bottom: 6px;
-}
-
-/* Subordinados */
-.subordinates-container {
-    margin-left: 20px;
-    border-left: 2px solid #00a39e; /* Verde institucional */
-    padding-left: 10px;
-    background-color: #e6f4f1; /* Fundo claro para separar os subordinados */
-    transition: all 0.3s ease;
-}
-
-/* Botão de expansão */
-.toggle-btn {
-    font-size: 12px;
-    padding: 2px 8px;
-    cursor: pointer;
-    background-color: #003B4E; /* Cor primária escura */
-    color: white;
+.file-input, .search-input {
+    padding: 6px;
     border-radius: 4px;
-    border: none;
-    margin-left: 10px;
-    transition: all 0.3s ease;
+    border: 1px solid #a0c4cc; /* Borda mais discreta */
+    width: 180px;
+    font-size: 13px;
 }
 
-/* Estilos de contagem e destaques */
-.counter {
-    background-color: #f0f0f0;
-    color: #333;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-weight: bold;
-    display: inline-block;
-    margin-left: 8px;
-}
-
-.highlight {
-    background-color: #33cccc;
-    font-weight: bold;
-    border-radius: 4px;
-    padding: 2px;
-}
-
-/* Estilo das seções de diretoria */
-.directorate-section {
-    margin-top: 20px;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    background-color: #f9f9f9;
-}
-
-/* Ajustes de pesquisa */
-#searchInput {
-    padding: 8px;
-    width: 80%;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    margin-right: 5px;
-}
-
-button {
-    padding: 8px 12px;
+.btn-primary, .btn-secondary {
     background-color: #007889;
-    color: white;
+    color: #ffffff;
     border: none;
     border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 13px;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: background-color 0.3s ease;
 }
 
-button:hover {
+.btn-primary:hover, .btn-secondary:hover {
     background-color: #005f6b;
 }
 
-/* Header e caixas de separação */
-.employee-name {
-    font-weight: bold;
-    color: black /* Força a cor branca no nome da pessoa */1;
-    font-size: 1em;
+/* Estilos do organograma */
+#organogram-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
-/* Ajuste para dispositivos móveis */
+.node {
+    text-align: center;
+    margin: 8px;
+    position: relative;
+}
+
+.employee-name {
+    border: 1px solid #a0c4cc; /* Borda com tom suave */
+    padding: 8px;
+    border-radius: 4px;
+    background-color: #f0f0f0;
+    width: 160px;
+    color: #333;
+    font-size: 13px;
+    display: inline-block;
+}
+
+.subordinates-container {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 15px;
+}
+
+/* Botão de expansão/recolhimento */
+.toggle-btn {
+    margin-top: 4px;
+    font-size: 11px;
+    padding: 2px 6px;
+    cursor: pointer;
+    background-color: #003B4E;
+    color: white;
+    border-radius: 4px;
+    border: none;
+    margin-left: 8px;
+    transition: all 0.3s ease;
+}
+
+/* Destaques */
+.highlight {
+    border: 2px solid #5da9b4; /* Borda suave combinando com o tema */
+    box-shadow: 0 0 8px rgba(93, 169, 180, 0.5); /* Sombra mais suave */
+}
+
+.highlight-search {
+    background-color: #33cccc !important;
+    padding: 6px;
+}
+
+/* Responsividade */
 @media (max-width: 768px) {
-    #organogram-container {
-        width: 100%;
-        padding: 10px;
+    .container {
+        width: 95%;
     }
-}   
+
+    .controls {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .search-input {
+        width: 100%;
+    }
+}
+
+.headcount-square {
+    display: inline-block;
+    background-color: #007889;
+    color: #ffffff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    margin-left: 5px;
+}
+
+
+footer {
+    text-align: center;
+    padding: 10px;
+    font-size: 12px;
+    color: #666;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    background-color: #f2f2f2;
+}
