@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Organograma com Diretoria e Gestores</title>
+  <h1 style="margin-top: 60px;">Organograma com Diretoria</h1>
+
+  <!-- Biblioteca SheetJS para ler Excel no navegador -->
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+  <style>
+    /* ====== CSS ORIGINAL DO ORGANOGRAMA (NÃO ALTERADO) ====== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    /* Aumentado margin-top para evitar que a barra fixa cubra o conteúdo */
+    #saidaOrganograma {
+      display: flex;
+      flex-direction: column;
+      gap: 50px;
+      margin-top: 120px;
+    }
+    .bloco-diretoria {
+      background: #fff;
+      border: 2px solid #444;
+      border-radius: 5px;
+      padding: 15px;
+    }
+    .titulo-diretoria {
+      text-align: center;
+      font-weight: bold;
+      font-size: 1.2rem;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #444;
+      padding-bottom: 5px;
+    }
+    ul.organograma-lista, ul.organograma-lista ul {
+      list-style-type: none;
+      margin: 0;
+      padding: 0;
+      position: relative;
+    }
+    ul.organograma-lista li {
+      position: relative;
+      margin: 10px 0;
+      line-height: 20px;
+      padding: 0 0 0 35px;
+    }
+    ul.organograma-lista li::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 15px;
+      border-left: 2px solid #ccc;
+      height: 100%;
+    }
+    ul.organograma-lista li::after {
+      content: "";
+      position: absolute;
+      top: 10px;
+      left: 15px;
+      width: 20px;
+      border-top: 2px solid #ccc;
+    }
+    ul.organograma-lista > li::before,
+    ul.organograma-lista > li::after {
+      border: 0;
+    }
+    .caixa-colaborador {
+      display: inline-block;
+      padding: 8px 12px;
+      border: 2px solid #444;
+      background: #fff;
+      border-radius: 5px;
+      position: relative;
+    }
+    .nome {
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    .cargo {
+      font-size: 0.9rem;
+      color: #555;
+    }
+    .toggle-btn {
+      position: absolute;
+      left: -30px;
+      top: 5px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid #444;
+      background: #eee;
+      cursor: pointer;
+      text-align: center;
+      line-height: 20px;
+      font-weight: bold;
+      user-select: none;
+    }
+    .toggle-btn.hidden {
+      display: none;
+    }
+    li.colapsado > ul {
+      display: none;
+    }
+    li.colapsado .toggle-btn::after {
+      content: '+';
+    }
+    .toggle-btn::after {
+      content: '-';
+    }
+    .highlight {
+      background: yellow;
+    }
+    .active-match {
+      background: orange;
+    }
+    /* ====== FIM CSS ORIGINAL DO ORGANOGRAMA ====== */
+
+    /* ====== CSS PARA CONTROLES (FLUTUANTE, COM FONTE REDUZIDA) ====== */
+    .controls {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: #ffffff;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      padding: 10px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      font-size: 11px;
+      z-index: 1000;
+    }
+    .file-input, .search-input {
+      padding: 6px;
+      border-radius: 4px;
+      border: 1px solid #a0c4cc;
+      width: 180px;
+      font-size: 11px;
+    }
+    .btn-primary, .btn-secondary {
+      background-color: #007889;
+      color: #ffffff;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 12px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    .btn-primary:hover, .btn-secondary:hover {
+      background-color: #005f6a;
+    }
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background-color: #ffffff;
+      min-width: 160px;
+      border: 1px solid #a0c4cc;
+      border-radius: 4px;
+      z-index: 1001;
+    }
+    .dropdown-content a {
+      display: block;
+      padding: 6px 12px;
+      text-decoration: none;
+      color: #007889;
+      font-size: 11px;
+    }
+    .dropdown-content a:hover {
+      background-color: #a0c4cc;
+    }
+    .dropdown:hover .dropdown-content {
+      display: block;
+    }
+    /* ====== CSS PARA A BARRA LATERAL (sidebar) ====== */
+    .sidebar {
+      position: fixed;
+      top: 50px;
+      right: 0;
+      width: 200px;
+      height: 100%;
+      background: #f1f1f1;
+      border-left: 1px solid #ccc;
+      padding: 10px;
+      font-size: 11px;
+      z-index: 1000;
+    }
+    /* ====== Estilização para o menu de Gestores ====== */
+    #navGestores {
+      min-height: 600px;  /* Altura para exibir pelo menos 10 linhas */
+      max-height: 600px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Área de Controles (barra flutuante) -->
+<div class="controls">
+  <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls,.csv" />
+  <button id="btnFecharTodos" class="btn-primary">Fechar Todos (Apenas 2 Níveis)</button>
+  <input type="text" id="buscaInput" class="search-input" placeholder="Buscar por nome ou função..." />
+  <button id="btnBuscar" class="btn-primary">Buscar</button>
+  <button id="btnNext" class="btn-secondary">Próximo</button>
+  <span id="matchCount"></span>
+  <!-- Novo elemento para a quantidade geral -->
+  <span id="totalCount"></span>
+  <div class="dropdown">
+    <button class="btn-primary">Diretorias</button>
+    <div class="dropdown-content" id="navDiretorias">
+      <!-- Links das diretorias serão inseridos aqui -->
+    </div>
+  </div>
+  <div class="dropdown">
+    <button class="btn-primary">Gestores</button>
+    <div class="dropdown-content" id="navGestores">
+      <!-- Links dos gestores serão inseridos aqui -->
+    </div>
+  </div>
+</div>
+
+<div id="saidaOrganograma"></div>
+
+<script>
+  // Variáveis globais para busca aprimorada
+  let searchMatches = [];
+  let currentMatchIndex = 0;
+
+  function updateMatchCounter() {
+    const matchCountElem = document.getElementById('matchCount');
+    if (searchMatches.length > 0) {
+      matchCountElem.textContent = `Ocorrência ${currentMatchIndex + 1} de ${searchMatches.length}`;
+    } else {
+      matchCountElem.textContent = "Nenhuma ocorrência encontrada";
+    }
+  }
+
+  // 1) Lê o arquivo Excel, concatena a matrícula no nome e gera organogramas por diretoria
+  document.getElementById('fileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      const data = new Uint8Array(evt.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+      const diretorias = agruparPorDiretoria(jsonData);
+
+      // Atualiza a quantidade geral de colaboradores
+      let totalColaboradores = 0;
+      Object.keys(diretorias).forEach(dir => {
+        totalColaboradores += Object.keys(diretorias[dir]).length;
+      });
+      document.getElementById('totalCount').textContent = ` | Total de colaboradores: ${totalColaboradores}`;
+
+      // Popula menu de Diretorias
+      const navDiretorias = document.getElementById('navDiretorias');
+      navDiretorias.innerHTML = "";
+      Object.keys(diretorias).forEach(nomeDir => {
+        const diretoriaId = "diretoria-" + nomeDir.replace(/\s+/g, '-').toLowerCase();
+        const link = document.createElement('a');
+        link.href = '#' + diretoriaId;
+        link.textContent = nomeDir;
+        navDiretorias.appendChild(link);
+      });
+
+      // Popula menu de Gestores com base nos colaboradores que possuem filhos (são gestores)
+      const gestoresSet = new Set();
+      Object.keys(diretorias).forEach(nomeDir => {
+        const colaboradores = diretorias[nomeDir];
+        Object.keys(colaboradores).forEach(matricula => {
+          const colab = colaboradores[matricula];
+          if (colab.filhos && colab.filhos.length > 0) {
+            gestoresSet.add(colab.nomeExibicao);
+          }
+        });
+      });
+      const gestoresArray = Array.from(gestoresSet).sort();
+      const navGestores = document.getElementById('navGestores');
+      navGestores.innerHTML = "";
+      gestoresArray.forEach(gestorNome => {
+        const link = document.createElement('a');
+        link.href = "#";
+        link.textContent = gestorNome;
+        link.addEventListener('click', function(e) {
+          e.preventDefault();
+          scrollToGestor(gestorNome);
+        });
+        navGestores.appendChild(link);
+      });
+
+      // Adiciona uma "barrinha" no final do menu para rolar até o final
+      const barrinha = document.createElement('div');
+      barrinha.textContent = "Ir para o final";
+      barrinha.style.display = "block";
+      barrinha.style.backgroundColor = "#007889";
+      barrinha.style.color = "#fff";
+      barrinha.style.padding = "5px";
+      barrinha.style.textAlign = "center";
+      barrinha.style.cursor = "pointer";
+      barrinha.style.marginTop = "5px";
+      barrinha.addEventListener('click', function(e) {
+        e.preventDefault();
+        const navGestores = document.getElementById('navGestores');
+        navGestores.scrollTop = navGestores.scrollHeight;
+      });
+      navGestores.appendChild(barrinha);
+
+      // Limpa a saída e cria os blocos por diretoria
+      const saida = document.getElementById('saidaOrganograma');
+      saida.innerHTML = "";
+      Object.keys(diretorias).forEach(nomeDir => {
+        const bloco = criarBlocoDiretoria(nomeDir, diretorias[nomeDir]);
+        saida.appendChild(bloco);
+      });
+    };
+    reader.readAsArrayBuffer(file);
+  });
+
+  // 2) Botão "Fechar Todos": colapsa todos os nós com nível >= 3
+  document.getElementById('btnFecharTodos').addEventListener('click', function() {
+    const lis = document.querySelectorAll('li[data-level]');
+    lis.forEach(li => {
+      const level = parseInt(li.getAttribute('data-level'), 10);
+      if (level >= 3) {
+        li.classList.add('colapsado');
+      } else {
+        li.classList.remove('colapsado');
+      }
+    });
+  });
+
+  // 3) Botão "Buscar": destaca os resultados (busca em nome e função)
+  document.getElementById('btnBuscar').addEventListener('click', function() {
+    const termo = document.getElementById('buscaInput').value.trim().toLowerCase();
+    if (!termo) return;
+    document.querySelectorAll('.caixa-colaborador').forEach(caixa => {
+      caixa.classList.remove('highlight');
+      caixa.classList.remove('active-match');
+    });
+    searchMatches = [];
+    currentMatchIndex = 0;
+    const todasCaixas = document.querySelectorAll('.caixa-colaborador');
+    todasCaixas.forEach(caixa => {
+      const nome = caixa.querySelector('.nome')?.textContent.toLowerCase() || "";
+      const cargo = caixa.querySelector('.cargo')?.textContent.toLowerCase() || "";
+      if (nome.includes(termo) || cargo.includes(termo)) {
+        caixa.classList.add('highlight');
+        searchMatches.push(caixa);
+      }
+    });
+    if (searchMatches.length > 0) {
+      const firstMatch = searchMatches[0];
+      firstMatch.classList.add('active-match');
+      expandirCaminho(firstMatch);
+      firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    updateMatchCounter();
+  });
+
+  // 4) Botão "Próximo": navega entre os resultados encontrados
+  document.getElementById('btnNext').addEventListener('click', function() {
+    if (searchMatches.length === 0) return;
+    searchMatches[currentMatchIndex].classList.remove('active-match');
+    currentMatchIndex = (currentMatchIndex + 1) % searchMatches.length;
+    const nextMatch = searchMatches[currentMatchIndex];
+    nextMatch.classList.add('active-match');
+    expandirCaminho(nextMatch);
+    nextMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    updateMatchCounter();
+  });
+
+  function expandirCaminho(elem) {
+    let li = elem.closest('li');
+    while (li) {
+      li.classList.remove('colapsado');
+      li = li.parentElement.closest('li');
+    }
+  }
+
+  // Função para rolar até o gestor usando o id atribuído
+  function scrollToGestor(gestorNome) {
+    const targetId = 'gestor-' + gestorNome.replace(/\s+/g, '-').toLowerCase();
+    const liGestor = document.getElementById(targetId);
+    if (liGestor) {
+      liGestor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      liGestor.classList.add('active-match');
+      setTimeout(() => liGestor.classList.remove('active-match'), 2000);
+    }
+  }
+
+  // 5) Agrupa colaboradores por Diretoria, concatena a matrícula no nome e retorna os dados
+  function agruparPorDiretoria(jsonData) {
+    const diretorias = {};
+    jsonData.forEach(linha => {
+      const dir = String(linha["2-Diretoria"]).trim() || "Sem Diretoria";
+      const matricula = String(linha["9-Matricula"]).trim();
+      let nomeSemMatricula = String(linha["10-Nome"]).trim() || "Sem Nome";
+      let nome = nomeSemMatricula + " (" + matricula + ")";
+      const cargo = String(linha["29-Título Cargo"]).trim() || "Sem Cargo";
+      const gestor = String(linha["38-Matrícula Gestor"] || "").trim();
+      const nomeGestor = (linha["39-Gestor "] || "").trim();
+      if (!diretorias[dir]) {
+        diretorias[dir] = {};
+      }
+      diretorias[dir][matricula] = {
+        matricula,
+        nome,
+        nomeExibicao: nomeSemMatricula, // Campo para exibição sem a matrícula
+        cargo,
+        gestor,
+        nomeGestor,
+        filhos: []
+      };
+    });
+    Object.keys(diretorias).forEach(d => {
+      const colaboradores = diretorias[d];
+      Object.keys(colaboradores).forEach(m => {
+        const colab = colaboradores[m];
+        if (colab.gestor && colaboradores[colab.gestor]) {
+          colaboradores[colab.gestor].filhos.push(m);
+        }
+      });
+    });
+    return diretorias;
+  }
+
+  // 6) Cria o bloco de cada Diretoria com link de âncora e ordena os colaboradores
+  function criarBlocoDiretoria(nomeDiretoria, colaboradores) {
+    const divBloco = document.createElement('div');
+    divBloco.className = "bloco-diretoria";
+    const diretoriaId = "diretoria-" + nomeDiretoria.replace(/\s+/g, '-').toLowerCase();
+    divBloco.setAttribute('id', diretoriaId);
+    const divTitulo = document.createElement('div');
+    divTitulo.className = "titulo-diretoria";
+    divTitulo.textContent = nomeDiretoria;
+    divBloco.appendChild(divTitulo);
+    let raizes = Object.keys(colaboradores).filter(m => {
+      const g = colaboradores[m].gestor;
+      return !g || !colaboradores[g];
+    });
+    raizes.sort((a, b) => {
+      const cargoCompare = colaboradores[a].cargo.localeCompare(colaboradores[b].cargo);
+      if (cargoCompare !== 0) return cargoCompare;
+      return colaboradores[a].nome.localeCompare(colaboradores[b].nome);
+    });
+    const ulRaiz = document.createElement('ul');
+    ulRaiz.className = "organograma-lista";
+    raizes.forEach(m => {
+      const li = criarLiColaborador(m, colaboradores, 1);
+      ulRaiz.appendChild(li);
+    });
+    divBloco.appendChild(ulRaiz);
+    return divBloco;
+  }
+
+  // 7) Cria recursivamente <li> para cada colaborador e ordena seus filhos
+  function criarLiColaborador(matricula, colaboradores, level) {
+    const colab = colaboradores[matricula];
+    const li = document.createElement('li');
+    li.setAttribute('data-level', level);
+    li.setAttribute('data-matricula', matricula);
+    const divCaixa = document.createElement('div');
+    divCaixa.className = "caixa-colaborador";
+    const btnToggle = document.createElement('div');
+    btnToggle.className = "toggle-btn";
+    if (!colab.filhos || colab.filhos.length === 0) {
+      btnToggle.classList.add('hidden');
+    }
+    btnToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      li.classList.toggle('colapsado');
+    });
+    divCaixa.appendChild(btnToggle);
+    const divNome = document.createElement('div');
+    divNome.className = "nome";
+    divNome.textContent = colab.nome;
+    divCaixa.appendChild(divNome);
+    const divCargo = document.createElement('div');
+    divCargo.className = "cargo";
+    divCargo.textContent = colab.cargo;
+    divCaixa.appendChild(divCargo);
+    li.appendChild(divCaixa);
+    
+    // Se o colaborador é gestor (tem filhos), adiciona um id para possibilitar o scroll pelo menu Gestores
+    if (colab.filhos && colab.filhos.length > 0) {
+      li.setAttribute('id', 'gestor-' + colab.nomeExibicao.replace(/\s+/g, '-').toLowerCase());
+    }
+    
+    if (colab.filhos && colab.filhos.length > 0) {
+      colab.filhos.sort((a, b) => {
+        const cargoCompare = colaboradores[a].cargo.localeCompare(colaboradores[b].cargo);
+        if (cargoCompare !== 0) return cargoCompare;
+        return colaboradores[a].nome.localeCompare(colaboradores[b].nome);
+      });
+      const ulFilhos = document.createElement('ul');
+      ulFilhos.className = "organograma-lista";
+      colab.filhos.forEach(f => {
+        const liFilho = criarLiColaborador(f, colaboradores, level + 1);
+        ulFilhos.appendChild(liFilho);
+      });
+      li.appendChild(ulFilhos);
+    }
+    return li;
+  }
+
+  // Busca automática ao pressionar Enter no campo de busca
+  document.getElementById('buscaInput').addEventListener('keydown', function(e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (searchMatches.length > 0) {
+        document.getElementById('btnNext').click();
+      } else {
+        document.getElementById('btnBuscar').click();
+      }
+    }
+  });
+</script>
+
+</body>
+</html>
